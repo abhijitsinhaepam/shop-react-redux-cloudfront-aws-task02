@@ -2,6 +2,7 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { InfraStack } from '../lib/infra-stack';
 
+
 const app = new cdk.App();
 new InfraStack(app, 'InfraStack', {
   /* If you don't specify 'env', this stack will be environment-agnostic.
