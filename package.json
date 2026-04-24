@@ -13,14 +13,19 @@
   "devDependencies": {
     "@types/jest": "^30",
     "@types/node": "^24.10.1",
+    "@types/react": "^19.2.14",
+    "aws-cdk": "2.1118.0",
     "jest": "^30",
     "ts-jest": "^29",
-    "aws-cdk": "2.1118.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3"
   },
   "dependencies": {
+    "@aws-cdk/aws-apigateway": "^1.203.0",
+    "@aws-cdk/aws-lambda": "^1.203.0",
+    "@tanstack/react-query": "^5.100.0",
     "aws-cdk-lib": "^2.248.0",
-    "constructs": "^10.5.0"
+    "constructs": "^10.5.0",
+    "esbuild": "^0.28.0"
   }
 }
