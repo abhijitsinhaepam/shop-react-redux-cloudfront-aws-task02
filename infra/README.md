@@ -19,4 +19,4 @@ http://frontend-deployment-abhijit.s3-website-us-east-1.amazonaws.com/
 
 (Returns 403 Access Denied after CloudFront setup as expected)
 CloudFront URL:
-https://d3a32sq83yz8fs.cloudfront.net/cart
+https://d3a32sq83yz8fs.cloudfront.net/
