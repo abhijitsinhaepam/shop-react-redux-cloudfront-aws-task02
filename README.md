@@ -16,6 +16,16 @@ This is frontend starter project for nodejs-aws mentoring program. It uses the f
 - [Prettier](https://prettier.io/) as a code formatting tool
 - [TypeScript](https://www.typescriptlang.org/) as a type checking tool
 
+
+
+🌐 Live URLs
+S3 Website URL:
+http://frontend-deployment-abhijit.s3-website-us-east-1.amazonaws.com/
+
+(Returns 403 Access Denied after CloudFront setup as expected)
+CloudFront URL:
+https://d3a32sq83yz8fs.cloudfront.net/
+
 ## Available Scripts
 
 ### `start`

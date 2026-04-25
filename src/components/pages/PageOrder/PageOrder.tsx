@@ -21,8 +21,12 @@ import TableCell from "@mui/material/TableCell";
 import TableBody from "@mui/material/TableBody";
 import TableContainer from "@mui/material/TableContainer";
 import Box from "@mui/material/Box";
-import { useQueries } from "react-query";
-import { useInvalidateOrder, useUpdateOrderStatus } from "~/queries/orders";
+
+import { useQueries } from "@tanstack/react-query";
+import {
+  useInvalidateOrder,
+  useUpdateOrderStatus,
+} from "~/queries/orders";
 
 type FormValues = {
   status: OrderStatus;
@@ -31,30 +35,39 @@ type FormValues = {
 
 export default function PageOrder() {
   const { id } = useParams<{ id: string }>();
-  const results = useQueries([
-    {
-      queryKey: ["order", { id }],
-      queryFn: async () => {
-        const res = await axios.get<Order>(`${API_PATHS.order}/order/${id}`);
-        return res.data;
+
+  const results = useQueries({
+    queries: [
+      {
+        queryKey: ["order", { id }],
+        queryFn: async () => {
+          const res = await axios.get<Order>(
+            `${API_PATHS.order}/order/${id}`
+          );
+          return res.data;
+        },
+        enabled: !!id,
       },
-    },
-    {
-      queryKey: "products",
-      queryFn: async () => {
-        const res = await axios.get<AvailableProduct[]>(
-          `${API_PATHS.bff}/product/available`
-        );
-        return res.data;
+      {
+        queryKey: ["products"],
+        queryFn: async () => {
+          const res = await axios.get<AvailableProduct[]>(
+            `${API_PATHS.bff}/product/available`
+          );
+          return res.data;
+        },
       },
-    },
-  ]);
+    ],
+  });
+
   const [
     { data: order, isLoading: isOrderLoading },
     { data: products, isLoading: isProductsLoading },
   ] = results;
+
   const { mutateAsync: updateOrderStatus } = useUpdateOrderStatus();
   const invalidateOrder = useInvalidateOrder();
+
   const cartItems: CartItem[] = React.useMemo(() => {
     if (order && products) {
       return order.items.map((item: OrderItem) => {
@@ -68,33 +81,46 @@ export default function PageOrder() {
     return [];
   }, [order, products]);
 
-  if (isOrderLoading || isProductsLoading) return <p>loading...</p>;
+  if (isOrderLoading || isProductsLoading) {
+    return <p>Loading...</p>;
+  }
 
-  const statusHistory = order?.statusHistory || [];
+  if (!order) return null;
 
+  const statusHistory = order.statusHistory || [];
   const lastStatusItem = statusHistory[statusHistory.length - 1];
 
-  return order ? (
+  return (
     <PaperLayout>
       <Typography component="h1" variant="h4" align="center">
         Manage order
       </Typography>
+
       <ReviewOrder address={order.address} items={cartItems} />
+
       <Typography variant="h6">Status:</Typography>
       <Typography variant="h6" color="primary">
-        {lastStatusItem?.status.toUpperCase()}
+        {lastStatusItem?.status?.toUpperCase()}
       </Typography>
+
       <Typography variant="h6">Change status:</Typography>
+
       <Box py={2}>
         <Formik
-          initialValues={{ status: lastStatusItem.status, comment: "" }}
+          initialValues={{
+            status:
+              lastStatusItem?.status || ORDER_STATUS_FLOW[0], // ✅ FIXED HERE
+            comment: "",
+          }}
           enableReinitialize
-          onSubmit={(values) =>
-            updateOrderStatus(
+          onSubmit={async (values) => {
+            await updateOrderStatus(
               { id: order.id, ...values },
-              { onSuccess: () => invalidateOrder(order.id) }
-            )
-          }
+              {
+                onSuccess: () => invalidateOrder(order.id),
+              }
+            );
+          }}
         >
           {({ values, dirty, isSubmitting }: FormikProps<FormValues>) => (
             <Form autoComplete="off">
@@ -119,17 +145,18 @@ export default function PageOrder() {
                     ))}
                   </Field>
                 </Grid>
+
                 <Grid item xs={12}>
                   <Field
                     component={TextField}
                     name="comment"
                     label="Comment"
                     fullWidth
-                    autoComplete="off"
                     multiline
                   />
                 </Grid>
-                <Grid item container xs={12} justifyContent="space-between">
+
+                <Grid item xs={12}>
                   <Button
                     type="submit"
                     variant="contained"
@@ -144,9 +171,11 @@ export default function PageOrder() {
           )}
         </Formik>
       </Box>
+
       <Typography variant="h6">Status history:</Typography>
+
       <TableContainer>
-        <Table aria-label="simple table">
+        <Table>
           <TableHead>
             <TableRow>
               <TableCell>Status</TableCell>
@@ -154,21 +183,20 @@ export default function PageOrder() {
               <TableCell align="right">Comment</TableCell>
             </TableRow>
           </TableHead>
+
           <TableBody>
-            {statusHistory.map((statusHistoryItem) => (
-              <TableRow key={order.id}>
-                <TableCell component="th" scope="row">
-                  {statusHistoryItem.status.toUpperCase()}
-                </TableCell>
+            {statusHistory.map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>{item.status.toUpperCase()}</TableCell>
                 <TableCell align="right">
-                  {new Date(statusHistoryItem.timestamp).toString()}
+                  {new Date(item.timestamp).toString()}
                 </TableCell>
-                <TableCell align="right">{statusHistoryItem.comment}</TableCell>
+                <TableCell align="right">{item.comment}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
     </PaperLayout>
-  ) : null;
+  );
 }

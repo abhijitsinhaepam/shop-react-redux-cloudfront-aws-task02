@@ -9,16 +9,19 @@ import AddProductToCart from "~/components/AddProductToCart/AddProductToCart";
 import { useAvailableProducts } from "~/queries/products";
 
 export default function Products() {
-  const { data = [], isLoading } = useAvailableProducts();
+  const { data = [], isLoading, isError } = useAvailableProducts();
 
   if (isLoading) {
     return <Typography>Loading...</Typography>;
   }
 
+  if (isError) {
+    return <Typography>Error loading products</Typography>;
+  }
+
   return (
     <Grid container spacing={4}>
-      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-      {data.map(({ count, ...product }, index) => (
+      {data.map((product, index) => (
         <Grid item key={product.id} xs={12} sm={6} md={4}>
           <Card
             sx={{ height: "100%", display: "flex", flexDirection: "column" }}
@@ -26,13 +29,15 @@ export default function Products() {
             <CardMedia
               sx={{ pt: "56.25%" }}
               image={`https://source.unsplash.com/random?sig=${index}`}
-              title="Image title"
+              title={product.title}
             />
             <CardContent sx={{ flexGrow: 1 }}>
-              <Typography gutterBottom variant="h5" component="h2">
+              <Typography gutterBottom variant="h5">
                 {product.title}
               </Typography>
-              <Typography>{formatAsPrice(product.price)}</Typography>
+              <Typography>
+                {formatAsPrice(product.price)}
+              </Typography>
             </CardContent>
             <CardActions>
               <AddProductToCart product={product} />
