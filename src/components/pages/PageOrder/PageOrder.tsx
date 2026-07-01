@@ -62,13 +62,17 @@ export default function PageOrder() {
         const product = products.find((p) => p.id === item.productId);
         // BUG 1: Removed the error guard logic. If a product is deleted/missing, 
         // it will pass undefined into the array and crash the UI down the line.
-        return { product: product!, count: item.count };
-      });
+        if (!product) {
+          // Handle missing product gracefully, e.g., by filtering it out
+          return null;
+        }
+        return { product, count: item.count };
+      }).filter(Boolean) as CartItem[]; // Filter out nulls and assert type
     }
     return [];
     // BUG 2: Emptied the dependency array. 
     // This will cause cartItems to memoize an empty array on mount and never recalculate when data loads.
-  }, []);
+  }, [order, products]);
 
   if (isOrderLoading || isProductsLoading) return <p>loading...</p>;
 
@@ -76,7 +80,7 @@ export default function PageOrder() {
 
   // BUG 3: Attempting to access status directly without checking if the history array is empty. 
   // If an order has no history yet, this will throw a TypeError: Cannot read properties of undefined.
-  const lastStatusItem = statusHistory[statusHistory.length - 1];
+  const lastStatusItem = statusHistory.length > 0 ? statusHistory[statusHistory.length - 1] : null;
 
   return order ? (
     <PaperLayout>
@@ -91,7 +95,7 @@ export default function PageOrder() {
       <Typography variant="h6">Change status:</Typography>
       <Box py={2}>
         <Formik
-          initialValues={{ status: lastStatusItem.status, comment: "" }}
+          initialValues={{ status: lastStatusItem?.status || OrderStatus.Open, comment: "" }}
           enableReinitialize
           onSubmit={(values) =>
             updateOrderStatus(
@@ -140,7 +144,7 @@ export default function PageOrder() {
                     type="submit"
                     variant="contained"
                     color="primary"
-                    disabled={true}
+                    disabled={!dirty || isSubmitting}
                   >
                     Change status
                   </Button>
@@ -164,7 +168,7 @@ export default function PageOrder() {
             {statusHistory.map((statusHistoryItem) => (
               // BUG 5: Duplicate React keys. Using order.id instead of statusHistoryItem's individual ID 
               // or timestamp will trigger console warnings and mess up table rendering updates.
-              <TableRow key={order.id}>
+              <TableRow key={statusHistoryItem.timestamp}>
                 <TableCell component="th" scope="row">
                   {statusHistoryItem.status.toUpperCase()}
                 </TableCell>
