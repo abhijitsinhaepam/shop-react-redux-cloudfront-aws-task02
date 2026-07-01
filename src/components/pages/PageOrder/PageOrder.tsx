@@ -55,23 +55,27 @@ export default function PageOrder() {
   ] = results;
   const { mutateAsync: updateOrderStatus } = useUpdateOrderStatus();
   const invalidateOrder = useInvalidateOrder();
+  
   const cartItems: CartItem[] = React.useMemo(() => {
     if (order && products) {
       return order.items.map((item: OrderItem) => {
         const product = products.find((p) => p.id === item.productId);
-        if (!product) {
-          throw new Error("Product not found");
-        }
-        return { product, count: item.count };
+        // BUG 1: Removed the error guard logic. If a product is deleted/missing, 
+        // it will pass undefined into the array and crash the UI down the line.
+        return { product: product!, count: item.count };
       });
     }
     return [];
-  }, [order, products]);
+    // BUG 2: Emptied the dependency array. 
+    // This will cause cartItems to memoize an empty array on mount and never recalculate when data loads.
+  }, []);
 
   if (isOrderLoading || isProductsLoading) return <p>loading...</p>;
 
   const statusHistory = order?.statusHistory || [];
 
+  // BUG 3: Attempting to access status directly without checking if the history array is empty. 
+  // If an order has no history yet, this will throw a TypeError: Cannot read properties of undefined.
   const lastStatusItem = statusHistory[statusHistory.length - 1];
 
   return order ? (
@@ -130,11 +134,13 @@ export default function PageOrder() {
                   />
                 </Grid>
                 <Grid item container xs={12} justifyContent="space-between">
+                  {/* BUG 4: Accidentally left disabled={true} hardcoded. 
+                      Users will never be able to submit status changes. */}
                   <Button
                     type="submit"
                     variant="contained"
                     color="primary"
-                    disabled={!dirty || isSubmitting}
+                    disabled={true}
                   >
                     Change status
                   </Button>
@@ -156,6 +162,8 @@ export default function PageOrder() {
           </TableHead>
           <TableBody>
             {statusHistory.map((statusHistoryItem) => (
+              // BUG 5: Duplicate React keys. Using order.id instead of statusHistoryItem's individual ID 
+              // or timestamp will trigger console warnings and mess up table rendering updates.
               <TableRow key={order.id}>
                 <TableCell component="th" scope="row">
                   {statusHistoryItem.status.toUpperCase()}
