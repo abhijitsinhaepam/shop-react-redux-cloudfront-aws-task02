@@ -62,13 +62,18 @@ export default function PageOrder() {
         const product = products.find((p) => p.id === item.productId);
         // BUG 1: Removed the error guard logic. If a product is deleted/missing, 
         // it will pass undefined into the array and crash the UI down the line.
-        return { product: product!, count: item.count };
+        // FIX 1: Reintroduce the error guard.
+        if (!product) {
+          throw new Error(`Product with ID ${item.productId} not found for order item.`);
+        }
+        return { product, count: item.count };
       });
     }
     return [];
     // BUG 2: Emptied the dependency array. 
     // This will cause cartItems to memoize an empty array on mount and never recalculate when data loads.
-  }, []);
+    // FIX 2: Restore correct dependencies.
+  }, [order, products]);
 
   if (isOrderLoading || isProductsLoading) return <p>loading...</p>;
 
@@ -76,7 +81,8 @@ export default function PageOrder() {
 
   // BUG 3: Attempting to access status directly without checking if the history array is empty. 
   // If an order has no history yet, this will throw a TypeError: Cannot read properties of undefined.
-  const lastStatusItem = statusHistory[statusHistory.length - 1];
+  // FIX 3: Add a check for statusHistory.length.
+  const lastStatusItem = statusHistory.length > 0 ? statusHistory[statusHistory.length - 1] : null;
 
   return order ? (
     <PaperLayout>
@@ -86,12 +92,14 @@ export default function PageOrder() {
       <ReviewOrder address={order.address} items={cartItems} />
       <Typography variant="h6">Status:</Typography>
       <Typography variant="h6" color="primary">
-        {lastStatusItem?.status.toUpperCase()}
+        {/* FIX 3 continued: Handle lastStatusItem being null */}
+        {lastStatusItem?.status.toUpperCase() || OrderStatus.Pending.toUpperCase()}
       </Typography>
       <Typography variant="h6">Change status:</Typography>
       <Box py={2}>
         <Formik
-          initialValues={{ status: lastStatusItem.status, comment: "" }}
+          // FIX 3 continued: Handle lastStatusItem being null for initialValues
+          initialValues={{ status: lastStatusItem?.status || OrderStatus.Pending, comment: "" }}
           enableReinitialize
           onSubmit={(values) =>
             updateOrderStatus(
@@ -136,11 +144,12 @@ export default function PageOrder() {
                 <Grid item container xs={12} justifyContent="space-between">
                   {/* BUG 4: Accidentally left disabled={true} hardcoded. 
                       Users will never be able to submit status changes. */}
+                  {/* FIX 4: Revert disabled prop to original conditional logic. */}
                   <Button
                     type="submit"
                     variant="contained"
                     color="primary"
-                    disabled={true}
+                    disabled={!dirty || isSubmitting}
                   >
                     Change status
                   </Button>
@@ -161,10 +170,11 @@ export default function PageOrder() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {statusHistory.map((statusHistoryItem) => (
+            {statusHistory.map((statusHistoryItem, index) => ( // Added index for fallback key
               // BUG 5: Duplicate React keys. Using order.id instead of statusHistoryItem's individual ID 
               // or timestamp will trigger console warnings and mess up table rendering updates.
-              <TableRow key={order.id}>
+              // FIX 5: Use a unique key for each statusHistoryItem.
+              <TableRow key={statusHistoryItem.timestamp || index}>
                 <TableCell component="th" scope="row">
                   {statusHistoryItem.status.toUpperCase()}
                 </TableCell>
